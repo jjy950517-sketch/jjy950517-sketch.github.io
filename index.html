@@ -127,5 +127,92 @@
   🔗 Supabase 연결 확인
 </button>
 
+<section id="signup-section" style="
+  max-width: 420px;
+  margin: 30px auto;
+  padding: 25px;
+  background: white;
+  border-radius: 16px;
+">
+  <h2>🍱 회원가입</h2>
+
+  <p>닉네임과 비밀번호만 입력하세요!</p>
+
+  <form id="signup-form">
+    <p>
+      <label for="signup-nickname">닉네임</label>
+      <input
+        id="signup-nickname"
+        type="text"
+        minlength="2"
+        maxlength="20"
+        required
+      >
+    </p>
+
+    <p>
+      <label for="signup-password">비밀번호</label>
+      <input
+        id="signup-password"
+        type="password"
+        minlength="6"
+        required
+      >
+    </p>
+
+    <button type="submit">회원가입</button>
+  </form>
+
+  <p id="signup-message"></p>
+</section>
+
+<script>
+  document.getElementById("signup-form")
+    .addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const nickname = document
+        .getElementById("signup-nickname").value.trim();
+
+      const password = document
+        .getElementById("signup-password").value;
+
+      const message = document
+        .getElementById("signup-message");
+
+      message.textContent = "회원가입 처리 중...";
+
+      const button = this.querySelector("button");
+      button.disabled = true;
+
+      try {
+        const { data, error } =
+          await supabaseClient.functions.invoke(
+            "register-user",
+            {
+              body: { nickname, password }
+            }
+          );
+
+        if (error) {
+          message.textContent =
+            data?.error || error.message ||
+            "회원가입에 실패했습니다.";
+        } else if (data?.error) {
+          message.textContent = data.error;
+        } else {
+          message.textContent =
+            "🎉 회원가입이 완료되었습니다!";
+          this.reset();
+        }
+      } catch (error) {
+        message.textContent =
+          "오류가 발생했습니다: " + error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+</script>
+
 </body>
 </html>
