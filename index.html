@@ -694,6 +694,46 @@ updateLunchList();
 
   const foodRatings = {};
 
+const testUserRatings = {
+  "준영": {
+    "제육볶음·불고기": 5,
+    "돈가스": 2,
+    "국밥·해장국": 4
+  },
+  "민수": {
+    "제육볶음·불고기": 4,
+    "돈가스": 5,
+    "국밥·해장국": 3
+  },
+  "지훈": {
+    "제육볶음·불고기": 5,
+    "돈가스": 3,
+    "국밥·해장국": 4
+  }
+};
+
+function getAverageFoodRating(food) {
+  const participants = [...lunchParticipants.keys()];
+  const ratings = [];
+
+  for (const nickname of participants) {
+    const userRatings = testUserRatings[nickname];
+
+    if (userRatings && userRatings[food]) {
+      ratings.push(userRatings[food]);
+    }
+  }
+
+  if (ratings.length === 0) {
+    return foodRatings[food] || 3;
+  }
+
+  const sum = ratings.reduce((a, b) => a + b, 0);
+
+  return sum / ratings.length;
+}
+
+  
   function renderPreferences() {
     const container =
       document.getElementById("preference-list");
@@ -973,14 +1013,20 @@ function savePreferences() {
           name => menu.includes(name) || name.includes(menu)
         ));
 
-      const rating = matchingFood
-        ? (foodRatings[matchingFood] || 3)
-        : 3;
+
+const rating = matchingFood
+  ? getAverageFoodRating(matchingFood)
+  : 3;
+
 
       // 별점 1~5점에 따라 후보 반복 횟수 결정
-      for (let i = 0; i < rating; i++) {
-        weightedCandidates.push(menu);
-      }
+
+const weight = Math.round(rating * 10);
+
+for (let i = 0; i < weight; i++) {
+  weightedCandidates.push(menu);
+}
+
     }
 
     const index = Math.floor(
