@@ -319,19 +319,17 @@
   });
 
 
+
 function showLunchPage() {
-  // 메인 화면 숨기기
+  // 현재 화면을 기억
+  sessionStorage.setItem("currentPage", "lunch");
+
   document.getElementById("home-page")
     .style.display = "none";
 
-  // 회원가입 화면과 연결 테스트 버튼 숨기기
   document.getElementById("signup-section")
     .style.display = "none";
 
-  document.getElementById("connection-test")
-    ?.style.setProperty("display", "none");
-
-  // 점심 참여 화면 표시
   document.getElementById("lunch-page")
     .style.display = "block";
 
@@ -339,20 +337,30 @@ function showLunchPage() {
 }
 
 function goHome() {
-  // 점심 참여 화면 숨기기
+  // 현재 화면을 홈으로 변경
+  sessionStorage.setItem("currentPage", "home");
+
   document.getElementById("lunch-page")
     .style.display = "none";
 
-  // 메인 화면 표시
   document.getElementById("home-page")
     .style.display = "block";
 
-  // 회원가입 화면 다시 표시
   document.getElementById("signup-section")
     .style.display = "block";
 
   window.scrollTo(0, 0);
 }
+
+// 새로고침했을 때 이전 화면 복원
+window.addEventListener("DOMContentLoaded", function() {
+  const currentPage = sessionStorage.getItem("currentPage");
+
+  if (currentPage === "lunch") {
+    showLunchPage();
+  }
+});
+
 
 
   function updateLunchList() {
