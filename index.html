@@ -91,5 +91,41 @@
       alert("이 기능은 다음 단계에서 구현할 예정입니다!");
     }
   </script>
+  
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  // Supabase 프로젝트 주소
+  const SUPABASE_URL =
+    "https://txncnlqvxcowzpasecy.supabase.co";
+
+  // 복사해 둔 Publishable key 입력
+  const SUPABASE_KEY = "sb_publishable_KB2qK1_Iclu1n5zZwUExxQ_muOJpTnm";
+
+  // Supabase 연결 객체 생성
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  async function testConnection() {
+    try {
+      const { error } = await supabaseClient.auth.getSession();
+
+      if (error) {
+        alert("Supabase 확인 실패: " + error.message);
+      } else {
+        alert("Supabase 클라이언트가 정상적으로 초기화되었습니다!");
+      }
+    } catch (error) {
+      alert("연결 오류: " + error.message);
+    }
+  }
+</script>
+
+<button onclick="testConnection()">
+  🔗 Supabase 연결 확인
+</button>
+
 </body>
 </html>
