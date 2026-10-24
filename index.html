@@ -548,39 +548,43 @@ updateLunchList();
 
   <h2>🔐 로그인</h2>
   
-<button onclick="showPreferencePage()" style="
-  background:#e9f3ff;
-  border:1px solid #93c5fd;
-  border-radius:10px;
-  padding:10px;
-  cursor:pointer;
-">
-  ⭐ 음식 취향 화면 미리보기
-</button>
 
-  <p>음식 취향을 설정하려면 로그인해 주세요.</p>
+<p>음식 취향을 설정하려면 로그인해 주세요.</p>
 
+<form id="login-form">
   <p>
     <label for="login-nickname">닉네임</label><br>
-    <input id="login-nickname"
+    <input
+      id="login-nickname"
       type="text"
-      placeholder="닉네임 입력">
+      placeholder="닉네임 입력"
+      autocomplete="username"
+      required
+    >
   </p>
 
   <p>
     <label for="login-password">비밀번호</label><br>
-    <input id="login-password"
+    <input
+      id="login-password"
       type="password"
-      placeholder="비밀번호 입력">
+      placeholder="비밀번호 입력"
+      autocomplete="current-password"
+      required
+    >
   </p>
 
-  <button onclick="alert('로그인 기능은 준비 중입니다!')">
-    로그인
+  <button type="submit" id="login-button">
+    🔐 로그인
   </button>
+</form>
 
-  <button onclick="showSignupPage()">
-    회원가입
-  </button>
+<button type="button" onclick="showSignupPage()">
+  회원가입
+</button>
+
+<p id="login-message"></p>
+
 </section>
 
 <script>
@@ -622,6 +626,98 @@ function showSignupPage() {
 
   window.scrollTo(0, 0);
 }
+
+document.getElementById("login-form")
+  .addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const nickname = document
+      .getElementById("login-nickname")
+      .value.trim();
+
+    const password = document
+      .getElementById("login-password")
+      .value;
+
+    const message = document
+      .getElementById("login-message");
+
+    const button = document
+      .getElementById("login-button");
+
+    message.textContent = "로그인 중...";
+    button.disabled = true;
+
+    try {
+      const { data, error } =
+        await supabaseClient.functions.invoke(
+          "login-user",
+          {
+            body: { nickname, password }
+          }
+        );
+
+      if (error || data?.error) {
+        let errorMessage =
+          data?.error || error?.message ||
+          "로그인에 실패했습니다.";
+
+        if (error?.context) {
+          try {
+            const errorData =
+              await error.context.json();
+
+            errorMessage =
+              errorData.error ||
+              errorData.message ||
+              errorMessage;
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        message.textContent = "❌ " + errorMessage;
+        return;
+      }
+
+      if (
+        !data?.session?.access_token ||
+        !data?.session?.refresh_token
+      ) {
+        message.textContent =
+          "❌ 로그인 세션을 받지 못했습니다.";
+        return;
+      }
+
+      // Supabase 로그인 세션 저장
+      const { error: sessionError } =
+        await supabaseClient.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        });
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      message.textContent = "✅ 로그인 성공!";
+
+      // 비밀번호 입력창 비우기
+      document.getElementById("login-password")
+        .value = "";
+
+      // 음식 취향 설정 화면으로 이동
+      showPreferencePage();
+
+    } catch (error) {
+      console.error("로그인 오류:", error);
+
+      message.textContent =
+        "❌ 로그인 중 오류가 발생했습니다.";
+    } finally {
+      button.disabled = false;
+    }
+  });
 
 </script>
 
