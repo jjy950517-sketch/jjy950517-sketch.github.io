@@ -124,11 +124,12 @@
   }
 </script>
 
-<button onclick="testConnection()">
+<button onclick="testConnection()" style="display:none;">
   🔗 Supabase 연결 확인
 </button>
 
 <section id="signup-section" style="
+  display:none;
   max-width: 420px;
   margin: 30px auto;
   padding: 25px;
@@ -344,9 +345,6 @@ function goHome() {
     .style.display = "none";
 
   document.getElementById("home-page")
-    .style.display = "block";
-
-  document.getElementById("signup-section")
     .style.display = "block";
 
   window.scrollTo(0, 0);
