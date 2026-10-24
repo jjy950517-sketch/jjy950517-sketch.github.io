@@ -367,5 +367,49 @@
   }
 </script>
 
+<style>
+  /* 오늘의 상태: 2열 배치 */
+  #lunch-conditions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  /* 선택 항목 디자인 */
+  #lunch-conditions label {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    min-height: 55px;
+    padding: 12px !important;
+    margin: 0 !important;
+    border: 2px solid #e5e7eb !important;
+    border-radius: 12px !important;
+    background: #f8fafc;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+
+  /* 선택된 항목 강조 */
+  #lunch-conditions label:has(input:checked) {
+    background: #e0f2fe;
+    border-color: #38bdf8 !important;
+    font-weight: bold;
+  }
+
+  #lunch-conditions input {
+    accent-color: #0284c7;
+    flex-shrink: 0;
+  }
+
+  /* 작은 화면에서도 글자가 잘 보이도록 */
+  @media (max-width: 380px) {
+    #lunch-conditions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
 </body>
 </html>
