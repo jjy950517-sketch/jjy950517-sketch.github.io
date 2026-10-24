@@ -64,7 +64,7 @@
     </section>
 
     <div class="grid">
-      <div class="card" onclick="notice()">
+      <div class="card" onclick="showLunchPage()">
         <h2>👥 점심 참여하기</h2>
         <p>오늘 함께 점심 먹을 직원 모집</p>
       </div>
@@ -212,6 +212,159 @@
         button.disabled = false;
       }
     });
+</script>
+
+<!-- 점심 참여 화면 -->
+<section id="lunch-page" style="
+  display:none;
+  max-width:600px;
+  margin:30px auto;
+  padding:24px;
+  background:white;
+  border-radius:18px;
+">
+  <h2>🍱 오늘 점심 참여하기</h2>
+
+  <h3 id="lunch-count">오늘 밥 먹는 인원: 0명</h3>
+  <p id="lunch-members">아직 참여자가 없습니다.</p>
+
+  <label for="lunch-nickname">닉네임</label>
+  <input id="lunch-nickname"
+    placeholder="닉네임을 입력하세요">
+
+  <h3>오늘의 상태</h3>
+  <p>여러 개 선택할 수 있어요!</p>
+
+  <div id="lunch-conditions"></div>
+
+  <p>
+    <button onclick="joinLunch()">
+      🙋 점심 참여하기
+    </button>
+    <button onclick="cancelLunch()">
+      참여 취소
+    </button>
+  </p>
+  <p id="lunch-message"></p>
+</section>
+
+<script>
+  const lunchOptions = [
+    ["normal", "😊 아무거나 좋아요"],
+    ["soup", "🍲 국물이 당겨요"],
+    ["hangover", "🥴 해장이 필요해요"],
+    ["light", "🥗 가볍게 먹고 싶어요"],
+    ["hearty", "🍖 든든하게 먹고 싶어요"],
+    ["spicy", "🌶️ 매운 음식이 당겨요"],
+    ["rice", "🍚 밥이 먹고 싶어요"],
+    ["noodle", "🍜 면이 당겨요"],
+    ["quick", "⚡ 빨리 먹고 싶어요"],
+    ["new", "✨ 새로운 음식에 도전!"]
+  ];
+
+  const lunchParticipants = new Map();
+
+  document.getElementById("lunch-conditions").innerHTML =
+    lunchOptions.map(([id, label]) => `
+      <label style="
+        display:block;
+        padding:10px;
+        margin:6px 0;
+        border:1px solid #ddd;
+        border-radius:10px;
+        cursor:pointer;
+      ">
+        <input type="checkbox"
+          name="lunch-condition"
+          value="${id}"
+          ${id === "normal" ? "checked" : ""}>
+        ${label}
+      </label>
+    `).join("");
+
+  document.querySelectorAll(
+    'input[name="lunch-condition"]'
+  ).forEach(input => {
+    input.addEventListener("change", () => {
+      const boxes = [...document.querySelectorAll(
+        'input[name="lunch-condition"]'
+      )];
+
+      const normal = boxes.find(x => x.value === "normal");
+
+      if (input.value === "normal" && input.checked) {
+        boxes.forEach(x => {
+          if (x !== normal) x.checked = false;
+        });
+      } else if (input.checked) {
+        normal.checked = false;
+      }
+
+      if (!boxes.some(x => x.checked)) {
+        normal.checked = true;
+      }
+    });
+  });
+
+  function showLunchPage() {
+    document.getElementById("lunch-page")
+      .style.display = "block";
+
+    document.getElementById("lunch-page")
+      .scrollIntoView({ behavior: "smooth" });
+  }
+
+  function updateLunchList() {
+    const names = [...lunchParticipants.keys()];
+
+    document.getElementById("lunch-count")
+      .textContent =
+        `오늘 밥 먹는 인원: ${names.length}명`;
+
+    document.getElementById("lunch-members")
+      .textContent = names.length
+        ? "참여자: " + names.join(", ")
+        : "아직 참여자가 없습니다.";
+  }
+
+  function joinLunch() {
+    const nickname = document.getElementById(
+      "lunch-nickname"
+    ).value.trim();
+
+    if (!nickname) {
+      alert("닉네임을 입력해 주세요.");
+      return;
+    }
+
+    const selected = [...document.querySelectorAll(
+      'input[name="lunch-condition"]:checked'
+    )].map(x => x.value);
+
+    lunchParticipants.set(nickname, selected);
+    updateLunchList();
+
+    document.getElementById("lunch-message")
+      .textContent =
+        `${nickname}님이 점심에 참여했습니다! 🎉`;
+  }
+
+  function cancelLunch() {
+    const nickname = document.getElementById(
+      "lunch-nickname"
+    ).value.trim();
+
+    if (!lunchParticipants.has(nickname)) {
+      alert("참여 중인 닉네임을 입력해 주세요.");
+      return;
+    }
+
+    lunchParticipants.delete(nickname);
+    updateLunchList();
+
+    document.getElementById("lunch-message")
+      .textContent = "참여가 취소되었습니다.";
+  }
 </script>
 
 </body>
