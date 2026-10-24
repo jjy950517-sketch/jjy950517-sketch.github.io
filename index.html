@@ -986,6 +986,7 @@ function savePreferences() {
     id="restaurant-search"
     type="text"
     placeholder="예: 제육볶음"
+    onkeydown="if(event.key === 'Enter') searchRestaurant()"
     style="
       width:100%;
       padding:12px;
