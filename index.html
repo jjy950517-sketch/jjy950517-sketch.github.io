@@ -196,11 +196,29 @@
             }
           );
 
-        if (error) {
-          message.textContent =
-            data?.error || error.message ||
-            "회원가입에 실패했습니다.";
-        } else if (data?.error) {
+
+if (error) {
+  let errorMessage = error.message;
+
+  // 서버가 반환한 상세 오류 읽기
+  if (error.context) {
+    try {
+      const errorData = await error.context.json();
+
+      errorMessage =
+        errorData.error ||
+        errorData.message ||
+        JSON.stringify(errorData);
+    } catch (e) {
+      console.error("오류 응답 읽기 실패:", e);
+    }
+  }
+
+  console.error("회원가입 상세 오류:", error);
+  message.textContent = "❌ " + errorMessage;
+
+} else if (data?.error) {
+
           message.textContent = data.error;
         } else {
           message.textContent =
