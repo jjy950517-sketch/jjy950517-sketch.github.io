@@ -737,12 +737,67 @@ window.addEventListener("DOMContentLoaded", function() {
     window.scrollTo(0, 0);
   }
 
-  function savePreferences() {
-    document.getElementById("preference-message")
-      .textContent =
-        "⭐ 별점 선택이 완료되었습니다! " +
-        "(서버 저장 기능은 추후 연결됩니다.)";
+
+function savePreferences() {
+  const allFoods = Object.values(foodCategories).flat();
+
+  // 별점을 선택하지 않은 음식 찾기
+  const missingFoods = allFoods.filter(
+    food => !foodRatings[food]
+  );
+
+  const message = document.getElementById(
+    "preference-message"
+  );
+
+  // 미평가 음식이 있다면
+  if (missingFoods.length > 0) {
+    const firstMissing = missingFoods[0];
+
+    alert(
+      "⚠️ 음식 취향을 선택해주세요!\n" +
+      "아직 " + missingFoods.length +
+      "개의 음식이 평가되지 않았습니다."
+    );
+
+    // 첫 번째 미평가 음식 위치 찾기
+    const rows = document.querySelectorAll(
+      "#preference-list .food-item"
+    );
+
+    const targetRow = [...rows].find(
+      row => row.querySelector("span")
+        ?.textContent === firstMissing
+    );
+
+    if (targetRow) {
+      targetRow.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+
+      // 미평가 음식 강조
+      targetRow.style.background = "#fff3cd";
+      targetRow.style.borderRadius = "10px";
+
+      setTimeout(() => {
+        targetRow.style.background = "";
+      }, 2500);
+    }
+
+    return;
   }
+
+  // 모든 음식의 별점을 선택했다면
+  message.textContent =
+    "🎉 모든 음식 취향 설정이 완료되었습니다! " +
+    "(실제 계정 저장은 추후 연결됩니다.)";
+
+  message.style.color = "green";
+
+  alert("🎉 음식 취향 설정이 완료되었습니다!");
+}
+
 </script>
 
 </body>
