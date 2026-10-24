@@ -75,7 +75,7 @@
         <p>좋아하는 음식과 알레르기 등록</p>
       </div>
 
-      <div class="card" onclick="notice()">
+      <div class="card" onclick="showRecommendationPage()">
         <h2>✨ 오늘의 메뉴 추천</h2>
         <p>참여 직원들의 취향 기반 추천</p>
       </div>
@@ -353,6 +353,9 @@ document.getElementById("preference-page")
   document.getElementById("home-page")
     .style.display = "block";
 
+document.getElementById("recommendation-page")
+  .style.display = "none";
+  
   window.scrollTo(0, 0);
 }
 
@@ -370,6 +373,9 @@ window.addEventListener("DOMContentLoaded", function() {
 }
   else if (currentPage === "preference") {
   showPreferencePage();
+}
+  else if (currentPage === "recommendation") {
+  showRecommendationPage();
 }
 });
 
@@ -798,6 +804,158 @@ function savePreferences() {
   alert("🎉 음식 취향 설정이 완료되었습니다!");
 }
 
+</script>
+
+<!-- 오늘의 메뉴 추천 화면 -->
+<section id="recommendation-page" style="
+  display:none;
+  max-width:650px;
+  margin:30px auto;
+  padding:25px;
+  background:white;
+  border-radius:18px;
+">
+  <button onclick="goHome()">← 홈으로 돌아가기</button>
+
+  <h2>✨ 오늘의 메뉴 추천</h2>
+
+  <p id="recommendation-count">
+    오늘 점심 참여 인원: 0명
+  </p>
+
+  <p>참여자들의 오늘의 상태를 분석해 메뉴를 추천합니다.</p>
+
+  <button onclick="recommendLunch()" style="
+    background:#0284c7;
+    color:white;
+    border:none;
+    border-radius:10px;
+    padding:14px 20px;
+    cursor:pointer;
+  ">
+    🎲 메뉴 추천받기
+  </button>
+
+  <div id="recommendation-result" style="
+    margin-top:20px;
+    padding:20px;
+    background:#e9f3ff;
+    border-radius:14px;
+    display:none;
+    text-align:center;
+  ">
+    <p>오늘의 추천 메뉴</p>
+    <h2 id="recommended-menu"></h2>
+
+    <button onclick="openRecommendedRestaurant()">
+      📍 네이버 지도에서 식당 찾기
+    </button>
+  </div>
+
+  <p id="recommendation-message"></p>
+</section>
+
+<script>
+  // 오늘의 상태별 추천 메뉴
+  const menuByCondition = {
+    soup: ["국밥", "순두부찌개", "칼국수"],
+    hangover: ["해장국", "콩나물국밥", "북엇국"],
+    light: ["샐러드", "포케", "쌀국수"],
+    hearty: ["제육볶음", "돈가스", "불고기"],
+    spicy: ["짬뽕", "마라탕", "매운 제육볶음"],
+    rice: ["비빔밥", "볶음밥", "백반"],
+    noodle: ["우동", "라멘", "잔치국수"],
+    quick: ["김밥", "덮밥", "국밥"],
+    new: ["팟타이", "카레", "리조또"],
+    normal: ["백반", "돈가스", "국밥", "비빔밥"]
+  };
+
+  let currentRecommendedMenu = "";
+
+  function showRecommendationPage() {
+    sessionStorage.setItem(
+      "currentPage", "recommendation"
+    );
+
+    document.getElementById("home-page")
+      .style.display = "none";
+
+    document.getElementById("lunch-page")
+      .style.display = "none";
+
+    document.getElementById("login-page")
+      .style.display = "none";
+
+    document.getElementById("signup-section")
+      .style.display = "none";
+
+    document.getElementById("preference-page")
+      .style.display = "none";
+
+    document.getElementById("recommendation-page")
+      .style.display = "block";
+
+    document.getElementById("recommendation-count")
+      .textContent =
+        "오늘 점심 참여 인원: " +
+        lunchParticipants.size + "명";
+
+    window.scrollTo(0, 0);
+  }
+
+  function recommendLunch() {
+    const message = document.getElementById(
+      "recommendation-message"
+    );
+
+    if (lunchParticipants.size === 0) {
+      message.textContent =
+        "⚠️ 먼저 점심 참여자를 등록해 주세요.";
+
+      document.getElementById("recommendation-result")
+        .style.display = "none";
+      return;
+    }
+
+    message.textContent = "";
+
+    const candidates = [];
+
+    // 참여자들의 오늘의 상태 수집
+    for (const conditions of lunchParticipants.values()) {
+      for (const condition of conditions) {
+        const menus = menuByCondition[condition] || [];
+        candidates.push(...menus);
+      }
+    }
+
+    if (candidates.length === 0) {
+      message.textContent = "추천할 메뉴가 없습니다.";
+      return;
+    }
+
+    // 후보 메뉴 중 무작위 선택
+    const index = Math.floor(
+      Math.random() * candidates.length
+    );
+
+    currentRecommendedMenu = candidates[index];
+
+    document.getElementById("recommended-menu")
+      .textContent = "🍽️ " + currentRecommendedMenu;
+
+    document.getElementById("recommendation-result")
+      .style.display = "block";
+  }
+
+  function openRecommendedRestaurant() {
+    if (!currentRecommendedMenu) return;
+
+    const url = "https://map.naver.com/p/search/" +
+      encodeURIComponent(currentRecommendedMenu);
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 </script>
 
 </body>
