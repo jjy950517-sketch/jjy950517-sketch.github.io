@@ -947,10 +947,10 @@ function getAverageFoodRating(food) {
   }
 
 
-function savePreferences() {
+function savePreferences() 
+async function savePreferences() {
   const allFoods = Object.values(foodCategories).flat();
 
-  // 별점을 선택하지 않은 음식 찾기
   const missingFoods = allFoods.filter(
     food => !foodRatings[food]
   );
@@ -959,17 +959,15 @@ function savePreferences() {
     "preference-message"
   );
 
-  // 미평가 음식이 있다면
+  // 모든 음식에 별점을 입력했는지 확인
   if (missingFoods.length > 0) {
     const firstMissing = missingFoods[0];
 
     alert(
-      "⚠️ 음식 취향을 선택해주세요!\n" +
-      "아직 " + missingFoods.length +
-      "개의 음식이 평가되지 않았습니다."
+      "⚠️ 아직 " + missingFoods.length +
+      "개의 음식에 별점을 입력하지 않았습니다."
     );
 
-    // 첫 번째 미평가 음식 위치 찾기
     const rows = document.querySelectorAll(
       "#preference-list .food-item"
     );
@@ -985,7 +983,6 @@ function savePreferences() {
         block: "center"
       });
 
-      // 미평가 음식 강조
       targetRow.style.background = "#fff3cd";
       targetRow.style.borderRadius = "10px";
 
@@ -997,14 +994,49 @@ function savePreferences() {
     return;
   }
 
-  // 모든 음식의 별점을 선택했다면
-  message.textContent =
-    "🎉 모든 음식 취향 설정이 완료되었습니다! " +
-    "(실제 계정 저장은 추후 연결됩니다.)";
+  message.textContent = "음식 취향 저장 중...";
 
-  message.style.color = "green";
+  try {
+    // 현재 로그인한 사용자 확인
+    const { data: { user }, error: userError } =
+      await supabaseClient.auth.getUser();
 
-  alert("🎉 음식 취향 설정이 완료되었습니다!");
+    if (userError || !user) {
+      message.textContent =
+        "❌ 로그인이 필요합니다.";
+      showLoginPage();
+      return;
+    }
+
+    // 음식별 별점 데이터 생성
+    const preferences = allFoods.map(food => ({
+      user_id: user.id,
+      food_name: food,
+      rating: foodRatings[food]
+    }));
+
+    // Supabase 데이터베이스에 저장
+    const { error } = await supabaseClient
+      .from("food_preferences")
+      .upsert(preferences, {
+        onConflict: "user_id,food_name"
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    alert("🎉 음식 취향이 저장되었습니다!");
+
+    // 저장 성공 후 홈 화면 이동
+    goHome();
+
+  } catch (error) {
+    console.error("음식 취향 저장 오류:", error);
+
+    message.textContent =
+      "❌ 저장에 실패했습니다: " + error.message;
+  }
 }
 
 </script>
