@@ -80,7 +80,7 @@
         <p>참여 직원들의 취향 기반 추천</p>
       </div>
 
-      <div class="card" onclick="notice()">
+      <div class="card" onclick="showRestaurantPage()">
         <h2>📍 주변 식당 보기</h2>
         <p>식당 위치와 이동시간 확인</p>
       </div>
@@ -355,6 +355,9 @@ document.getElementById("preference-page")
 
 document.getElementById("recommendation-page")
   .style.display = "none";
+
+document.getElementById("restaurant-page")
+  .style.display = "none";
   
   window.scrollTo(0, 0);
 }
@@ -376,6 +379,9 @@ window.addEventListener("DOMContentLoaded", function() {
 }
   else if (currentPage === "recommendation") {
   showRecommendationPage();
+}
+  else if (currentPage === "restaurant") {
+  showRestaurantPage();
 }
 });
 
@@ -953,6 +959,99 @@ function savePreferences() {
 
     const url = "https://map.naver.com/p/search/" +
       encodeURIComponent(currentRecommendedMenu);
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+</script>
+
+<!-- 주변 식당 보기 화면 -->
+<section id="restaurant-page" style="
+  display:none;
+  max-width:650px;
+  margin:30px auto;
+  padding:25px;
+  background:white;
+  border-radius:18px;
+">
+  <button onclick="goHome()">← 홈으로 돌아가기</button>
+
+  <h2>📍 주변 식당 보기</h2>
+  <p>추천 메뉴 또는 원하는 음식을 검색해 보세요!</p>
+
+  <p>
+    <label for="restaurant-search">검색할 음식</label>
+  </p>
+
+  <input
+    id="restaurant-search"
+    type="text"
+    placeholder="예: 제육볶음"
+    style="
+      width:100%;
+      padding:12px;
+      border:1px solid #ddd;
+      border-radius:10px;
+      font-size:16px;
+    "
+  >
+
+  <button onclick="searchRestaurant()" style="
+    margin-top:15px;
+    background:#0284c7;
+    color:white;
+    border:none;
+    border-radius:10px;
+    padding:12px 20px;
+    cursor:pointer;
+  ">
+    🔎 네이버 지도에서 검색
+  </button>
+</section>
+
+<script>
+  function showRestaurantPage() {
+    sessionStorage.setItem(
+      "currentPage", "restaurant"
+    );
+
+    // 기존 화면 모두 숨기기
+    [
+      "home-page",
+      "lunch-page",
+      "login-page",
+      "signup-section",
+      "preference-page",
+      "recommendation-page"
+    ].forEach(id => {
+      document.getElementById(id)
+        .style.display = "none";
+    });
+
+    // 식당 검색 화면 표시
+    document.getElementById("restaurant-page")
+      .style.display = "block";
+
+    // 추천받은 메뉴가 있다면 자동 입력
+    if (currentRecommendedMenu) {
+      document.getElementById("restaurant-search")
+        .value = currentRecommendedMenu;
+    }
+
+    window.scrollTo(0, 0);
+  }
+
+  function searchRestaurant() {
+    const menu = document.getElementById(
+      "restaurant-search"
+    ).value.trim();
+
+    if (!menu) {
+      alert("검색할 음식을 입력해 주세요.");
+      return;
+    }
+
+    const url = "https://map.naver.com/p/search/" +
+      encodeURIComponent(menu);
 
     window.open(url, "_blank", "noopener,noreferrer");
   }
