@@ -409,27 +409,26 @@ document.getElementById("signup-section")
 }
 
 // 새로고침했을 때 이전 화면 복원
-window.addEventListener("DOMContentLoaded", function() {
+
+window.addEventListener("DOMContentLoaded", function () {
   const currentPage = sessionStorage.getItem("currentPage");
 
-  if (currentPage === "lunch") {
-    showLunchPage();
+  const restorePages = {
+    lunch: showLunchPage,
+    login: showLoginPage,
+    signup: showSignupPage,
+    preference: showPreferencePage,
+    recommendation: showRecommendationPage,
+    restaurant: showRestaurantPage
+  };
+
+  if (currentPage && restorePages[currentPage]) {
+    restorePages[currentPage]();
+  } else {
+    goHome();
   }
-  else if (currentPage === "login") {
-  showLoginPage();
-} else if (currentPage === "signup") {
-  showSignupPage();
-}
-  else if (currentPage === "preference") {
-  showPreferencePage();
-}
-  else if (currentPage === "recommendation") {
-  showRecommendationPage();
-}
-  else if (currentPage === "restaurant") {
-  showRestaurantPage();
-}
 });
+
 
 
 
@@ -603,17 +602,27 @@ updateLunchList();
     window.scrollTo(0, 0);
   }
 
-  function showSignupPage() {
-    sessionStorage.setItem("currentPage", "signup");
 
-    document.getElementById("login-page")
-      .style.display = "none";
+function showSignupPage() {
+  sessionStorage.setItem("currentPage", "signup");
 
-    document.getElementById("signup-section")
-      .style.display = "block";
+  [
+    "home-page",
+    "lunch-page",
+    "login-page",
+    "preference-page",
+    "recommendation-page",
+    "restaurant-page"
+  ].forEach(id => {
+    document.getElementById(id).style.display = "none";
+  });
 
-    window.scrollTo(0, 0);
-  }
+  document.getElementById("signup-section")
+    .style.display = "block";
+
+  window.scrollTo(0, 0);
+}
+
 </script>
 
 <!-- 개인 음식 취향 설정 화면 -->
