@@ -136,6 +136,18 @@
   background: white;
   border-radius: 16px;
 ">
+  
+<button onclick="goHome()" style="
+  background:#e9f3ff;
+  border:none;
+  border-radius:10px;
+  padding:10px 16px;
+  cursor:pointer;
+  margin-bottom:15px;
+">
+  ← 홈으로 돌아가기
+</button>
+
   <h2>🍱 회원가입</h2>
 
   <p>닉네임과 비밀번호만 입력하세요!</p>
@@ -388,6 +400,9 @@ document.getElementById("recommendation-page")
   .style.display = "none";
 
 document.getElementById("restaurant-page")
+  .style.display = "none";
+
+document.getElementById("signup-section")
   .style.display = "none";
   
   window.scrollTo(0, 0);
