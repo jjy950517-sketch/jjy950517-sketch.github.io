@@ -70,7 +70,7 @@
         <p>오늘 함께 점심 먹을 직원 모집</p>
       </div>
 
-      <div class="card" onclick="notice()">
+      <div class="card" onclick="showLoginPage()">
         <h2>❤️ 음식 취향 설정</h2>
         <p>좋아하는 음식과 알레르기 등록</p>
       </div>
@@ -344,6 +344,9 @@ function goHome() {
   document.getElementById("lunch-page")
     .style.display = "none";
 
+document.getElementById("login-page")
+  .style.display = "none";
+  
   document.getElementById("home-page")
     .style.display = "block";
 
@@ -357,6 +360,11 @@ window.addEventListener("DOMContentLoaded", function() {
   if (currentPage === "lunch") {
     showLunchPage();
   }
+  else if (currentPage === "login") {
+  showLoginPage();
+} else if (currentPage === "signup") {
+  showSignupPage();
+}
 });
 
 
@@ -457,6 +465,75 @@ window.addEventListener("DOMContentLoaded", function() {
     }
   }
 </style>
+
+<!-- 로그인 화면 -->
+<section id="login-page" style="
+  display:none;
+  max-width:420px;
+  margin:30px auto;
+  padding:25px;
+  background:white;
+  border-radius:18px;
+">
+  <button onclick="goHome()">← 홈으로 돌아가기</button>
+
+  <h2>🔐 로그인</h2>
+  <p>음식 취향을 설정하려면 로그인해 주세요.</p>
+
+  <p>
+    <label for="login-nickname">닉네임</label><br>
+    <input id="login-nickname"
+      type="text"
+      placeholder="닉네임 입력">
+  </p>
+
+  <p>
+    <label for="login-password">비밀번호</label><br>
+    <input id="login-password"
+      type="password"
+      placeholder="비밀번호 입력">
+  </p>
+
+  <button onclick="alert('로그인 기능은 준비 중입니다!')">
+    로그인
+  </button>
+
+  <button onclick="showSignupPage()">
+    회원가입
+  </button>
+</section>
+
+<script>
+  function showLoginPage() {
+    sessionStorage.setItem("currentPage", "login");
+
+    document.getElementById("home-page")
+      .style.display = "none";
+
+    document.getElementById("lunch-page")
+      .style.display = "none";
+
+    document.getElementById("signup-section")
+      .style.display = "none";
+
+    document.getElementById("login-page")
+      .style.display = "block";
+
+    window.scrollTo(0, 0);
+  }
+
+  function showSignupPage() {
+    sessionStorage.setItem("currentPage", "signup");
+
+    document.getElementById("login-page")
+      .style.display = "none";
+
+    document.getElementById("signup-section")
+      .style.display = "block";
+
+    window.scrollTo(0, 0);
+  }
+</script>
 
 </body>
 </html>
