@@ -960,11 +960,35 @@ function savePreferences() {
     }
 
     // 후보 메뉴 중 무작위 선택
+
+    // 별점이 높은 메뉴일수록 추천 확률 증가
+    const weightedCandidates = [];
+
+    for (const menu of candidates) {
+      // "제육볶음" → "제육볶음·불고기"처럼
+      // 음식 분류에 포함된 항목 찾기
+      const matchingFood = Object.values(foodCategories)
+        .flat()
+        .find(food => food.split("·").some(
+          name => menu.includes(name) || name.includes(menu)
+        ));
+
+      const rating = matchingFood
+        ? (foodRatings[matchingFood] || 3)
+        : 3;
+
+      // 별점 1~5점에 따라 후보 반복 횟수 결정
+      for (let i = 0; i < rating; i++) {
+        weightedCandidates.push(menu);
+      }
+    }
+
     const index = Math.floor(
-      Math.random() * candidates.length
+      Math.random() * weightedCandidates.length
     );
 
-    currentRecommendedMenu = candidates[index];
+    currentRecommendedMenu = weightedCandidates[index];
+
 
     document.getElementById("recommended-menu")
       .textContent = "🍽️ " + currentRecommendedMenu;
