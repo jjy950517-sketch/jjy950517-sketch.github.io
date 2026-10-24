@@ -275,7 +275,20 @@
     ["new", "✨ 새로운 음식에 도전!"]
   ];
 
-  const lunchParticipants = new Map();
+  
+const lunchParticipants = new Map(
+  JSON.parse(
+    localStorage.getItem("lunchParticipants") || "[]"
+  )
+);
+
+function saveLunchParticipants() {
+  localStorage.setItem(
+    "lunchParticipants",
+    JSON.stringify([...lunchParticipants])
+  );
+}
+
 
   document.getElementById("lunch-conditions").innerHTML =
     lunchOptions.map(([id, label]) => `
@@ -333,7 +346,7 @@ function showLunchPage() {
 
   document.getElementById("lunch-page")
     .style.display = "block";
-
+updateLunchList();
   window.scrollTo(0, 0);
 }
 
@@ -414,8 +427,11 @@ window.addEventListener("DOMContentLoaded", function() {
       'input[name="lunch-condition"]:checked'
     )].map(x => x.value);
 
-    lunchParticipants.set(nickname, selected);
-    updateLunchList();
+    
+lunchParticipants.set(nickname, selected);
+saveLunchParticipants();
+updateLunchList();
+
 
     document.getElementById("lunch-message")
       .textContent =
@@ -432,8 +448,11 @@ window.addEventListener("DOMContentLoaded", function() {
       return;
     }
 
-    lunchParticipants.delete(nickname);
-    updateLunchList();
+
+lunchParticipants.delete(nickname);
+saveLunchParticipants();
+updateLunchList();
+
 
     document.getElementById("lunch-message")
       .textContent = "참여가 취소되었습니다.";
