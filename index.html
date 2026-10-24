@@ -346,6 +346,9 @@ function goHome() {
 
 document.getElementById("login-page")
   .style.display = "none";
+
+document.getElementById("preference-page")
+  .style.display = "none";
   
   document.getElementById("home-page")
     .style.display = "block";
@@ -364,6 +367,9 @@ window.addEventListener("DOMContentLoaded", function() {
   showLoginPage();
 } else if (currentPage === "signup") {
   showSignupPage();
+}
+  else if (currentPage === "preference") {
+  showPreferencePage();
 }
 });
 
@@ -478,6 +484,17 @@ window.addEventListener("DOMContentLoaded", function() {
   <button onclick="goHome()">← 홈으로 돌아가기</button>
 
   <h2>🔐 로그인</h2>
+  
+<button onclick="showPreferencePage()" style="
+  background:#e9f3ff;
+  border:1px solid #93c5fd;
+  border-radius:10px;
+  padding:10px;
+  cursor:pointer;
+">
+  ⭐ 음식 취향 화면 미리보기
+</button>
+
   <p>음식 취향을 설정하려면 로그인해 주세요.</p>
 
   <p>
@@ -532,6 +549,199 @@ window.addEventListener("DOMContentLoaded", function() {
       .style.display = "block";
 
     window.scrollTo(0, 0);
+  }
+</script>
+
+<!-- 개인 음식 취향 설정 화면 -->
+<section id="preference-page" style="
+  display:none;
+  max-width:650px;
+  margin:30px auto;
+  padding:24px;
+  background:white;
+  border-radius:18px;
+">
+  <button onclick="goHome()">← 홈으로 돌아가기</button>
+
+  <h2>⭐ 나의 음식 취향 설정</h2>
+  <p>평소 좋아하는 음식에 별점을 주세요!</p>
+  <p>⭐ 1점: 싫어함 / 3점: 보통 / 5점: 매우 좋아함</p>
+
+  <div id="preference-list"></div>
+
+  <button onclick="savePreferences()" style="
+    margin-top:20px;
+    padding:12px 20px;
+    background:#0284c7;
+    color:white;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+  ">
+    💾 취향 저장하기
+  </button>
+
+  <p id="preference-message"></p>
+</section>
+
+<style>
+  .food-category {
+    margin-top:22px;
+    padding:14px;
+    background:#e9f3ff;
+    border-radius:12px;
+  }
+
+  .food-item {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding:12px 4px;
+    border-bottom:1px solid #eee;
+  }
+
+  .food-stars {
+    display:flex;
+    gap:4px;
+    flex-shrink:0;
+  }
+
+  .food-stars button {
+    border:none;
+    background:none;
+    font-size:23px;
+    cursor:pointer;
+    padding:2px;
+    color:#cbd5e1;
+  }
+
+  .food-stars button.selected {
+    color:#f59e0b;
+  }
+
+  @media(max-width:450px) {
+    .food-item {
+      flex-direction:column;
+      align-items:flex-start;
+    }
+  }
+</style>
+
+<script>
+  const foodCategories = {
+    "🍚 한식": [
+      "백반·가정식", "김치찌개·된장찌개",
+      "국밥·해장국", "순두부·부대찌개",
+      "비빔밥·돌솥밥", "제육볶음·불고기",
+      "삼겹살·고기구이"
+    ],
+    "🥟 중식": [
+      "짜장면", "짬뽕", "볶음밥",
+      "탕수육", "마라탕·마라샹궈"
+    ],
+    "🍣 일식": [
+      "돈가스", "초밥·회", "라멘",
+      "우동·소바", "덮밥·규동"
+    ],
+    "🍝 양식": [
+      "파스타", "피자", "햄버거",
+      "스테이크·그릴", "리조또"
+    ],
+    "🍢 분식": [
+      "김밥", "떡볶이", "라면", "튀김·순대"
+    ],
+    "🍜 아시아 음식": [
+      "쌀국수", "팟타이·태국 볶음면",
+      "베트남식 덮밥", "카레·인도 음식"
+    ],
+    "🥗 기타": [
+      "샐러드·포케", "샌드위치·토스트",
+      "죽·수프", "냉면·밀면"
+    ]
+  };
+
+  const foodRatings = {};
+
+  function renderPreferences() {
+    const container =
+      document.getElementById("preference-list");
+
+    container.innerHTML = "";
+
+    for (const [category, foods] of
+      Object.entries(foodCategories)) {
+
+      const heading = document.createElement("h3");
+      heading.className = "food-category";
+      heading.textContent = category;
+      container.appendChild(heading);
+
+      foods.forEach(food => {
+        const row = document.createElement("div");
+        row.className = "food-item";
+
+        const name = document.createElement("span");
+        name.textContent = food;
+        row.appendChild(name);
+
+        const stars = document.createElement("div");
+        stars.className = "food-stars";
+
+        for (let score = 1; score <= 5; score++) {
+          const button =
+            document.createElement("button");
+
+          button.type = "button";
+          button.textContent = "★";
+
+          if (score <= (foodRatings[food] || 0)) {
+            button.classList.add("selected");
+          }
+
+          button.onclick = () => {
+            foodRatings[food] = score;
+            renderPreferences();
+          };
+
+          stars.appendChild(button);
+        }
+
+        row.appendChild(stars);
+        container.appendChild(row);
+      });
+    }
+  }
+
+  function showPreferencePage() {
+    sessionStorage.setItem(
+      "currentPage", "preference"
+    );
+
+    document.getElementById("home-page")
+      .style.display = "none";
+
+    document.getElementById("lunch-page")
+      .style.display = "none";
+
+    document.getElementById("login-page")
+      .style.display = "none";
+
+    document.getElementById("signup-section")
+      .style.display = "none";
+
+    document.getElementById("preference-page")
+      .style.display = "block";
+
+    renderPreferences();
+    window.scrollTo(0, 0);
+  }
+
+  function savePreferences() {
+    document.getElementById("preference-message")
+      .textContent =
+        "⭐ 별점 선택이 완료되었습니다! " +
+        "(서버 저장 기능은 추후 연결됩니다.)";
   }
 </script>
 
