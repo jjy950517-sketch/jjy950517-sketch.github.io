@@ -102,7 +102,7 @@
         <p>오늘 함께 점심 먹을 직원 모집</p>
       </div>
 
-      <div class="card" onclick="showLoginPage()">
+      <div class="card" onclick="openMyPreferences()">
         <h2>❤️ 음식 취향 설정</h2>
         <p>좋아하는 음식과 알레르기 등록</p>
       </div>
@@ -803,8 +803,8 @@ await updateAuthStatus();
       document.getElementById("login-password")
         .value = "";
 
-      // 음식 취향 설정 화면으로 이동
-      showPreferencePage();
+// 저장된 음식 취향을 불러온 뒤 화면 이동
+await openMyPreferences();
 
     } catch (error) {
       console.error("로그인 오류:", error);
@@ -1132,6 +1132,49 @@ async function savePreferences() {
     message.textContent =
       "❌ 저장에 실패했습니다: " + error.message;
   }
+}
+
+async function openMyPreferences() {
+  const { data: { user }, error } =
+    await supabaseClient.auth.getUser();
+
+  if (error || !user) {
+    showLoginPage();
+    return;
+  }
+
+  await loadMyPreferences();
+  showPreferencePage();
+}
+
+async function loadMyPreferences() {
+  const { data: { user }, error: userError } =
+    await supabaseClient.auth.getUser();
+
+  if (userError || !user) return;
+
+  const { data, error } = await supabaseClient
+    .from("food_preferences")
+    .select("food_name, rating")
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("음식 취향 불러오기 오류:", error);
+    alert("저장된 음식 취향을 불러오지 못했습니다.");
+    return;
+  }
+
+  // 이전 사용자의 별점 초기화
+  Object.keys(foodRatings).forEach(food => {
+    delete foodRatings[food];
+  });
+
+  // 데이터베이스에 저장된 별점 불러오기
+  for (const item of data || []) {
+    foodRatings[item.food_name] = item.rating;
+  }
+
+  renderPreferences();
 }
 
 </script>
