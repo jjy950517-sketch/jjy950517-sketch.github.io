@@ -363,6 +363,7 @@ if (error) {
   
   <h2>🍱 오늘 점심 참여하기</h2>
 
+  <p id="lunch-hours" style="font-weight:bold;color:#0369a1"></p>
   <h3 id="lunch-count">오늘 밥 먹는 인원: 0명</h3>
   <p id="lunch-members">아직 참여자가 없습니다.</p>
 
@@ -374,10 +375,10 @@ if (error) {
   <div id="lunch-conditions"></div>
 
   <p>
-    <button onclick="joinLunch()">
+    <button id="join-lunch-button" onclick="joinLunch()">
       🙋 점심 참여하기
     </button>
-    <button onclick="cancelLunch()">
+    <button id="cancel-lunch-button" onclick="cancelLunch()">
       참여 취소
     </button>
   </p>
@@ -416,6 +417,27 @@ if (error) {
       parts.find(part => part.type === type).value;
 
     return `${get("year")}-${get("month")}-${get("day")}`;
+  }
+
+  // 한국 시간 기준 점심 운영시간: 11:00 이상, 13:00 미만
+  function isLunchOpenKST() {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+    }).formatToParts(new Date());
+    const hour = Number(parts.find(p => p.type === "hour").value);
+    return hour >= 11 && hour < 13;
+  }
+
+  function refreshLunchHours() {
+    const open = isLunchOpenKST();
+    document.getElementById("lunch-hours").textContent = open
+      ? "🟢 참여 가능 시간입니다 (11:00~13:00)"
+      : "🔒 점심 참여는 매일 11:00~13:00에 가능합니다.";
+    document.getElementById("join-lunch-button").disabled = !open;
+    document.getElementById("cancel-lunch-button").disabled = !open;
+    document.querySelectorAll('input[name="lunch-condition"]').forEach(input => {
+      input.disabled = !open;
+    });
   }
 
   // 오늘의 상태 체크박스 생성
@@ -475,6 +497,7 @@ if (error) {
       lunchParticipants.clear();
       updateLunchList();
       statusElement.textContent = "점심에 참여하려면 로그인이 필요합니다.";
+      refreshLunchHours();
       return;
     }
     const { data, error } = await supabaseClient.rpc("get_today_lunch_members");
@@ -500,16 +523,19 @@ if (error) {
       input.checked = myConditions.includes(input.value);
     });
     messageElement.textContent = "";
+    refreshLunchHours();
   }
 
   function updateLunchList() {
-    const members = [...lunchParticipants.values()];
+    const members = isLunchOpenKST() ? [...lunchParticipants.values()] : [];
     document.getElementById("lunch-count").textContent =
       `오늘 밥 먹는 인원: ${members.length}명`;
     const memberElement = document.getElementById("lunch-members");
     memberElement.replaceChildren();
     if (members.length === 0) {
-      memberElement.textContent = "아직 참여자가 없습니다.";
+      memberElement.textContent = isLunchOpenKST()
+        ? "아직 참여자가 없습니다."
+        : "운영시간 외에는 참여자 목록이 초기화되어 표시됩니다.";
       return;
     }
     const conditionNames = Object.fromEntries(lunchOptions);
@@ -527,6 +553,24 @@ if (error) {
       memberElement.appendChild(row);
     }
   }
+
+  // 시간 경계(11시/13시)와 날짜 변경에 맞춰 화면 자동 갱신
+  let lastLunchDay = getTodayKST();
+  let lastLunchOpen = isLunchOpenKST();
+  setInterval(() => {
+    const today = getTodayKST();
+    const open = isLunchOpenKST();
+    if (today !== lastLunchDay || open !== lastLunchOpen) {
+      lastLunchDay = today;
+      lastLunchOpen = open;
+      lunchParticipants.clear();
+      updateLunchList();
+      if (open && document.getElementById("lunch-page").style.display === "block") {
+        loadLunchParticipants();
+      }
+    }
+    refreshLunchHours();
+  }, 60000);
 
   // 점심 참여 화면 열기
   function showLunchPage() {
@@ -547,6 +591,7 @@ if (error) {
     document.getElementById("lunch-page")
       .style.display = "block";
 
+    refreshLunchHours();
     loadLunchParticipants();
 
     window.scrollTo(0, 0);
@@ -600,6 +645,11 @@ if (error) {
 
   // 점심 참여하기
   async function joinLunch() {
+    if (!isLunchOpenKST()) {
+      refreshLunchHours();
+      alert("점심 참여는 11:00~13:00에만 가능합니다.");
+      return;
+    }
     const { data: { user }, error: userError } =
       await supabaseClient.auth.getUser();
 
@@ -637,6 +687,11 @@ if (error) {
 
   // 점심 참여 취소
   async function cancelLunch() {
+    if (!isLunchOpenKST()) {
+      refreshLunchHours();
+      alert("점심 참여 취소는 11:00~13:00에만 가능합니다.");
+      return;
+    }
     const { data: { user }, error: userError } =
       await supabaseClient.auth.getUser();
 
@@ -1397,13 +1452,18 @@ async function loadMyPreferences() {
     }
   }
 
+  // 회사 주변 음식점 검색: 주소와 메뉴를 함께 네이버 지도에 전달
+  const OFFICE_ADDRESS = "목포시 삼학로 218";
+
+  function openNaverMapSearch(keyword) {
+    const query = `${OFFICE_ADDRESS} ${keyword}`.trim();
+    const url = "https://map.naver.com/p/search/" + encodeURIComponent(query);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   function openRecommendedRestaurant() {
     if (!currentRecommendedMenu) return;
-
-    const url = "https://map.naver.com/p/search/" +
-      encodeURIComponent(currentRecommendedMenu);
-
-    window.open(url, "_blank", "noopener,noreferrer");
+    openNaverMapSearch(currentRecommendedMenu);
   }
 </script>
 
@@ -1419,7 +1479,11 @@ async function loadMyPreferences() {
   <button onclick="goHome()">← 홈으로 돌아가기</button>
 
   <h2>📍 주변 식당 보기</h2>
-  <p>추천 메뉴 또는 원하는 음식을 검색해 보세요!</p>
+  <p>회사 주변에서 추천 메뉴 또는 원하는 음식을 찾아보세요.</p>
+  <p style="padding:10px 12px;background:#f1f5f9;border-radius:10px;font-size:14px;">
+    📍 검색 기준 위치: <strong>목포시 삼학로 218</strong>
+  </p>
+  <p style="font-size:13px;color:#64748b;">검색 결과의 실제 거리·이동시간·영업 여부는 네이버 지도에서 확인해 주세요.</p>
 
   <p>
     <label for="restaurant-search">검색할 음식</label>
@@ -1448,7 +1512,10 @@ async function loadMyPreferences() {
     padding:12px 20px;
     cursor:pointer;
   ">
-    🔎 네이버 지도에서 검색
+    🔎 회사 주변 식당 검색
+  </button>
+  <button onclick="openNaverMapSearch('')" style="margin:15px 0 0 8px;padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:white;cursor:pointer;">
+    📍 회사 위치 보기
   </button>
 </section>
 
@@ -1494,10 +1561,7 @@ async function loadMyPreferences() {
       return;
     }
 
-    const url = "https://map.naver.com/p/search/" +
-      encodeURIComponent(menu);
-
-    window.open(url, "_blank", "noopener,noreferrer");
+    openNaverMapSearch(menu);
   }
 </script>
 
