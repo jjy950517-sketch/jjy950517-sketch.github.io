@@ -468,47 +468,66 @@ if (error) {
 
   // Supabase에서 오늘 점심 참여자 불러오기
   async function loadLunchParticipants() {
-    const statusElement =
-      document.getElementById("lunch-my-status");
 
-    const messageElement =
-      document.getElementById("lunch-message");
+async function loadLunchParticipants() {
+  const statusElement =
+    document.getElementById("lunch-my-status");
 
-    const { data: { user }, error: userError } =
-      await supabaseClient.auth.getUser();
+  const messageElement =
+    document.getElementById("lunch-message");
 
-    if (userError || !user) {
-      lunchParticipants.clear();
-      updateLunchList();
+  const { data: { user }, error: userError } =
+    await supabaseClient.auth.getUser();
 
-      if (statusElement) {
-        statusElement.textContent =
-          "점심에 참여하려면 로그인이 필요합니다.";
-      }
-      return;
-    }
-
-    const { data, error } = await supabaseClient
-      .from("lunch_participants")
-      .select("user_id, conditions")
-      .eq("lunch_date", getTodayKST());
-
-    if (error) {
-      console.error("점심 참여자 조회 오류:", error);
-
-      messageElement.textContent =
-        "❌ 참여자 목록을 불러오지 못했습니다.";
-      return;
-    }
-
+  if (userError || !user) {
     lunchParticipants.clear();
+    updateLunchList();
 
-    for (const item of data || []) {
-      lunchParticipants.set(
-        item.user_id,
-        item.conditions
-      );
-    }
+    statusElement.textContent =
+      "점심에 참여하려면 로그인이 필요합니다.";
+    return;
+  }
+
+  // 오늘 참여한 직원의 닉네임과 상태 조회
+  const { data, error } = await supabaseClient
+    .rpc("get_today_lunch_members");
+
+  if (error) {
+    console.error("점심 참여자 조회 오류:", error);
+    messageElement.textContent =
+      "❌ 참여자 목록을 불러오지 못했습니다.";
+    return;
+  }
+
+  lunchParticipants.clear();
+
+  for (const item of data || []) {
+    lunchParticipants.set(item.user_id, {
+      nickname: item.nickname,
+      conditions: item.conditions
+    });
+  }
+
+  updateLunchList();
+
+  const myParticipation = lunchParticipants.get(user.id);
+
+  statusElement.textContent = myParticipation
+    ? "✅ 오늘 점심에 참여 중입니다."
+    : "아직 오늘 점심에 참여하지 않았습니다.";
+
+  // 본인이 선택했던 오늘의 상태 복원
+  const myConditions = myParticipation?.conditions || ["normal"];
+
+  document.querySelectorAll(
+    'input[name="lunch-condition"]'
+  ).forEach(input => {
+    input.checked = myConditions.includes(input.value);
+  });
+
+  messageElement.textContent = "";
+}
+
 
     updateLunchList();
 
@@ -541,16 +560,54 @@ if (error) {
 
   // 참여 인원수 표시
   function updateLunchList() {
-    const count = lunchParticipants.size;
 
-    document.getElementById("lunch-count")
-      .textContent = `오늘 밥 먹는 인원: ${count}명`;
+function updateLunchList() {
+  const members = [...lunchParticipants.values()];
 
-    document.getElementById("lunch-members")
-      .textContent = count > 0
-        ? `현재 점심 참여자: ${count}명`
-        : "아직 참여자가 없습니다.";
+  document.getElementById("lunch-count")
+    .textContent =
+      `오늘 밥 먹는 인원: ${members.length}명`;
+
+  const memberElement =
+    document.getElementById("lunch-members");
+
+  if (members.length === 0) {
+    memberElement.textContent =
+      "아직 참여자가 없습니다.";
+    return;
   }
+
+  const conditionNames = Object.fromEntries(lunchOptions);
+
+  // 사용자 입력을 HTML로 해석하지 않고 텍스트로 표시
+  memberElement.replaceChildren();
+
+  for (const member of members) {
+    const row = document.createElement("div");
+
+    row.style.padding = "10px";
+    row.style.marginBottom = "6px";
+    row.style.background = "#f1f5f9";
+    row.style.borderRadius = "10px";
+
+    const name = document.createElement("strong");
+    name.textContent = "👤 " + member.nickname;
+
+    const condition = document.createElement("div");
+    condition.style.fontSize = "13px";
+    condition.style.marginTop = "4px";
+    condition.style.color = "#64748b";
+
+    condition.textContent = member.conditions
+      .map(id => conditionNames[id] || id)
+      .join(" · ");
+
+    row.appendChild(name);
+    row.appendChild(condition);
+    memberElement.appendChild(row);
+  }
+}
+
 
   // 점심 참여 화면 열기
   function showLunchPage() {
@@ -1398,7 +1455,7 @@ async function loadMyPreferences() {
     const candidates = [];
 
     // 참여자들의 오늘의 상태 수집
-    for (const conditions of lunchParticipants.values()) {
+    for (const { conditions } of lunchParticipants.values()) {
       for (const condition of conditions) {
         const menus = menuByCondition[condition] || [];
         candidates.push(...menus);
