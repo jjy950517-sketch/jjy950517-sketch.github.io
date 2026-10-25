@@ -1452,12 +1452,19 @@ async function loadMyPreferences() {
     }
   }
 
-  // 회사 주변 음식점 검색: 주소와 메뉴를 함께 네이버 지도에 전달
+  // 회사 주소는 검색어에 섞지 않고 지도 중심 좌표로 사용
   const OFFICE_ADDRESS = "목포시 삼학로 218";
+  const OFFICE_LONGITUDE = 126.406754;
+  const OFFICE_LATITUDE = 34.7901662;
 
   function openNaverMapSearch(keyword) {
-    const query = `${OFFICE_ADDRESS} ${keyword}`.trim();
-    const url = "https://map.naver.com/p/search/" + encodeURIComponent(query);
+    const query = keyword.trim();
+    if (!query) return;
+    // 네이버 지도 검색어는 음식 이름만 전달
+    // c: 경도, 위도, 확대 수준, 지도 회전/기울기 설정
+    const center = `${OFFICE_LONGITUDE},${OFFICE_LATITUDE},15,0,0,0,dh`;
+    const url = "https://map.naver.com/p/search/" +
+      encodeURIComponent(query) + "?c=" + encodeURIComponent(center);
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
