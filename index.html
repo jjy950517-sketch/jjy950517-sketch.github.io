@@ -52,9 +52,41 @@
   </style>
 </head>
 <body>
-  <header>
-    <strong>🍱 오늘 뭐 먹지?</strong>
-  </header>
+
+<header style="
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+">
+  <strong>🍱 오늘 뭐 먹지?</strong>
+
+  <div id="auth-status" style="
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:14px;
+  ">
+    <span id="current-user-name"></span>
+
+    <button
+      id="logout-button"
+      type="button"
+      onclick="logoutUser()"
+      style="
+        display:none;
+        padding:8px 12px;
+        background:#e9f3ff;
+        border:1px solid #93c5fd;
+        border-radius:8px;
+        cursor:pointer;
+      "
+    >
+      로그아웃
+    </button>
+  </div>
+</header>
+
 
   <main class="container" id="home-page">
     <section class="intro">
