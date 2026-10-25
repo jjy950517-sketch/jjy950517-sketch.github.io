@@ -366,9 +366,7 @@ if (error) {
   <h3 id="lunch-count">오늘 밥 먹는 인원: 0명</h3>
   <p id="lunch-members">아직 참여자가 없습니다.</p>
 
-  <label for="lunch-nickname">닉네임</label>
-  <input id="lunch-nickname"
-    placeholder="닉네임을 입력하세요">
+<p id="lunch-my-status">로그인 정보를 확인 중입니다.</p>
 
   <h3>오늘의 상태</h3>
   <p>여러 개 선택할 수 있어요!</p>
@@ -386,6 +384,7 @@ if (error) {
   <p id="lunch-message"></p>
 </section>
 
+
 <script>
   const lunchOptions = [
     ["normal", "😊 아무거나 좋아요"],
@@ -400,21 +399,26 @@ if (error) {
     ["new", "✨ 새로운 음식에 도전!"]
   ];
 
-  
-const lunchParticipants = new Map(
-  JSON.parse(
-    localStorage.getItem("lunchParticipants") || "[]"
-  )
-);
+  // 오늘 점심 참여자 정보
+  // key: 사용자 ID / value: 오늘의 상태 목록
+  let lunchParticipants = new Map();
 
-function saveLunchParticipants() {
-  localStorage.setItem(
-    "lunchParticipants",
-    JSON.stringify([...lunchParticipants])
-  );
-}
+  // 한국 시간 기준 오늘 날짜
+  function getTodayKST() {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
 
+    const get = type =>
+      parts.find(part => part.type === type).value;
 
+    return `${get("year")}-${get("month")}-${get("day")}`;
+  }
+
+  // 오늘의 상태 체크박스 생성
   document.getElementById("lunch-conditions").innerHTML =
     lunchOptions.map(([id, label]) => `
       <label style="
@@ -425,14 +429,17 @@ function saveLunchParticipants() {
         border-radius:10px;
         cursor:pointer;
       ">
-        <input type="checkbox"
+        <input
+          type="checkbox"
           name="lunch-condition"
           value="${id}"
-          ${id === "normal" ? "checked" : ""}>
+          ${id === "normal" ? "checked" : ""}
+        >
         ${label}
       </label>
     `).join("");
 
+  // '아무거나'와 다른 상태를 동시에 선택하지 못하도록 설정
   document.querySelectorAll(
     'input[name="lunch-condition"]'
   ).forEach(input => {
@@ -441,145 +448,240 @@ function saveLunchParticipants() {
         'input[name="lunch-condition"]'
       )];
 
-      const normal = boxes.find(x => x.value === "normal");
+      const normal = boxes.find(
+        box => box.value === "normal"
+      );
 
       if (input.value === "normal" && input.checked) {
-        boxes.forEach(x => {
-          if (x !== normal) x.checked = false;
+        boxes.forEach(box => {
+          if (box !== normal) box.checked = false;
         });
       } else if (input.checked) {
         normal.checked = false;
       }
 
-      if (!boxes.some(x => x.checked)) {
+      if (!boxes.some(box => box.checked)) {
         normal.checked = true;
       }
     });
   });
 
+  // Supabase에서 오늘 점심 참여자 불러오기
+  async function loadLunchParticipants() {
+    const statusElement =
+      document.getElementById("lunch-my-status");
 
+    const messageElement =
+      document.getElementById("lunch-message");
 
-function showLunchPage() {
-  // 현재 화면을 기억
-  sessionStorage.setItem("currentPage", "lunch");
+    const { data: { user }, error: userError } =
+      await supabaseClient.auth.getUser();
 
-  document.getElementById("home-page")
-    .style.display = "none";
+    if (userError || !user) {
+      lunchParticipants.clear();
+      updateLunchList();
 
-  document.getElementById("signup-section")
-    .style.display = "none";
+      if (statusElement) {
+        statusElement.textContent =
+          "점심에 참여하려면 로그인이 필요합니다.";
+      }
+      return;
+    }
 
-  document.getElementById("lunch-page")
-    .style.display = "block";
-updateLunchList();
-  window.scrollTo(0, 0);
-}
+    const { data, error } = await supabaseClient
+      .from("lunch_participants")
+      .select("user_id, conditions")
+      .eq("lunch_date", getTodayKST());
 
-function goHome() {
-  // 현재 화면을 홈으로 변경
-  sessionStorage.setItem("currentPage", "home");
+    if (error) {
+      console.error("점심 참여자 조회 오류:", error);
 
-  document.getElementById("lunch-page")
-    .style.display = "none";
+      messageElement.textContent =
+        "❌ 참여자 목록을 불러오지 못했습니다.";
+      return;
+    }
 
-document.getElementById("login-page")
-  .style.display = "none";
+    lunchParticipants.clear();
 
-document.getElementById("preference-page")
-  .style.display = "none";
-  
-  document.getElementById("home-page")
-    .style.display = "block";
+    for (const item of data || []) {
+      lunchParticipants.set(
+        item.user_id,
+        item.conditions
+      );
+    }
 
-document.getElementById("recommendation-page")
-  .style.display = "none";
+    updateLunchList();
 
-document.getElementById("restaurant-page")
-  .style.display = "none";
+    const myConditions = lunchParticipants.get(user.id);
 
-document.getElementById("signup-section")
-  .style.display = "none";
-  
-  window.scrollTo(0, 0);
-}
+    if (statusElement) {
+      statusElement.textContent = myConditions
+        ? "✅ 오늘 점심에 참여 중입니다."
+        : "아직 오늘 점심에 참여하지 않았습니다.";
+    }
 
-// 새로고침했을 때 이전 화면 복원
+    // 이미 참여했다면 이전에 선택한 상태 복원
+    if (myConditions) {
+      document.querySelectorAll(
+        'input[name="lunch-condition"]'
+      ).forEach(input => {
+        input.checked =
+          myConditions.includes(input.value);
+      });
+    } else {
+      document.querySelectorAll(
+        'input[name="lunch-condition"]'
+      ).forEach(input => {
+        input.checked = input.value === "normal";
+      });
+    }
 
-window.addEventListener("DOMContentLoaded", function () {
-  const currentPage = sessionStorage.getItem("currentPage");
-
-  const restorePages = {
-    lunch: showLunchPage,
-    login: showLoginPage,
-    signup: showSignupPage,
-    preference: showPreferencePage,
-    recommendation: showRecommendationPage,
-    restaurant: showRestaurantPage
-  };
-
-  if (currentPage && restorePages[currentPage]) {
-    restorePages[currentPage]();
-  } else {
-    goHome();
+    messageElement.textContent = "";
   }
-});
 
-
-
-
+  // 참여 인원수 표시
   function updateLunchList() {
-    const names = [...lunchParticipants.keys()];
+    const count = lunchParticipants.size;
 
     document.getElementById("lunch-count")
-      .textContent =
-        `오늘 밥 먹는 인원: ${names.length}명`;
+      .textContent = `오늘 밥 먹는 인원: ${count}명`;
 
     document.getElementById("lunch-members")
-      .textContent = names.length
-        ? "참여자: " + names.join(", ")
+      .textContent = count > 0
+        ? `현재 점심 참여자: ${count}명`
         : "아직 참여자가 없습니다.";
   }
 
-  function joinLunch() {
-    const nickname = document.getElementById(
-      "lunch-nickname"
-    ).value.trim();
+  // 점심 참여 화면 열기
+  function showLunchPage() {
+    sessionStorage.setItem("currentPage", "lunch");
 
-    if (!nickname) {
-      alert("닉네임을 입력해 주세요.");
+    [
+      "home-page",
+      "signup-section",
+      "login-page",
+      "preference-page",
+      "recommendation-page",
+      "restaurant-page"
+    ].forEach(id => {
+      document.getElementById(id)
+        .style.display = "none";
+    });
+
+    document.getElementById("lunch-page")
+      .style.display = "block";
+
+    loadLunchParticipants();
+
+    window.scrollTo(0, 0);
+  }
+
+  // 홈 화면으로 돌아가기
+  function goHome() {
+    sessionStorage.setItem("currentPage", "home");
+
+    [
+      "lunch-page",
+      "login-page",
+      "preference-page",
+      "recommendation-page",
+      "restaurant-page",
+      "signup-section"
+    ].forEach(id => {
+      document.getElementById(id)
+        .style.display = "none";
+    });
+
+    document.getElementById("home-page")
+      .style.display = "block";
+
+    window.scrollTo(0, 0);
+  }
+
+  // 새로고침 시 이전 화면 복원
+  window.addEventListener(
+    "DOMContentLoaded",
+    function () {
+      const currentPage =
+        sessionStorage.getItem("currentPage");
+
+      const restorePages = {
+        lunch: showLunchPage,
+        login: showLoginPage,
+        signup: showSignupPage,
+        preference: showPreferencePage,
+        recommendation: showRecommendationPage,
+        restaurant: showRestaurantPage
+      };
+
+      if (currentPage && restorePages[currentPage]) {
+        restorePages[currentPage]();
+      } else {
+        goHome();
+      }
+    }
+  );
+
+  // 점심 참여하기
+  async function joinLunch() {
+    const { data: { user }, error: userError } =
+      await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      alert("로그인 후 점심에 참여할 수 있습니다.");
+      showLoginPage();
       return;
     }
 
     const selected = [...document.querySelectorAll(
       'input[name="lunch-condition"]:checked'
-    )].map(x => x.value);
+    )].map(input => input.value);
 
-    
-lunchParticipants.set(nickname, selected);
-saveLunchParticipants();
-updateLunchList();
+    const { error } = await supabaseClient
+      .from("lunch_participants")
+      .upsert({
+        user_id: user.id,
+        lunch_date: getTodayKST(),
+        conditions: selected
+      }, {
+        onConflict: "user_id,lunch_date"
+      });
 
-
-    document.getElementById("lunch-message")
-      .textContent =
-        `${nickname}님이 점심에 참여했습니다! 🎉`;
-  }
-
-  function cancelLunch() {
-    const nickname = document.getElementById(
-      "lunch-nickname"
-    ).value.trim();
-
-    if (!lunchParticipants.has(nickname)) {
-      alert("참여 중인 닉네임을 입력해 주세요.");
+    if (error) {
+      alert("점심 참여 실패: " + error.message);
       return;
     }
 
+    await loadLunchParticipants();
 
-lunchParticipants.delete(nickname);
-saveLunchParticipants();
-updateLunchList();
+    document.getElementById("lunch-message")
+      .textContent =
+        "🎉 오늘 점심에 참여했습니다!";
+  }
 
+  // 점심 참여 취소
+  async function cancelLunch() {
+    const { data: { user }, error: userError } =
+      await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      alert("로그인이 필요합니다.");
+      showLoginPage();
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from("lunch_participants")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("lunch_date", getTodayKST());
+
+    if (error) {
+      alert("참여 취소 실패: " + error.message);
+      return;
+    }
+
+    await loadLunchParticipants();
 
     document.getElementById("lunch-message")
       .textContent = "참여가 취소되었습니다.";
@@ -629,6 +731,7 @@ updateLunchList();
     }
   }
 </style>
+
 
 <!-- 로그인 화면 -->
 <section id="login-page" style="
