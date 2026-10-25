@@ -141,6 +141,69 @@
     SUPABASE_KEY
   );
 
+async function updateAuthStatus() {
+  const nameElement = document.getElementById("current-user-name");
+  const logoutButton = document.getElementById("logout-button");
+
+  if (!nameElement || !logoutButton) return;
+
+  const { data: { user }, error } =
+    await supabaseClient.auth.getUser();
+
+  if (error || !user) {
+    nameElement.textContent = "";
+    logoutButton.style.display = "none";
+    return;
+  }
+
+  const { data: profile, error: profileError } =
+    await supabaseClient
+      .from("profiles")
+      .select("nickname")
+      .eq("id", user.id)
+      .single();
+
+  if (profileError) {
+    console.error("닉네임 조회 오류:", profileError);
+    nameElement.textContent = "로그인 중";
+  } else {
+    nameElement.textContent = profile.nickname + "님";
+  }
+
+  logoutButton.style.display = "inline-block";
+}
+
+async function logoutUser() {
+  const { error } = await supabaseClient.auth.signOut();
+
+  if (error) {
+    alert("로그아웃에 실패했습니다: " + error.message);
+    return;
+  }
+
+  // 이전 사용자의 별점이 다음 사용자에게 보이지 않도록 초기화
+  Object.keys(foodRatings).forEach(food => {
+    delete foodRatings[food];
+  });
+
+  await updateAuthStatus();
+  goHome();
+
+  alert("로그아웃되었습니다.");
+}
+
+// 로그인 및 로그아웃 상태가 변경되면 화면 갱신
+supabaseClient.auth.onAuthStateChange(() => {
+  setTimeout(() => {
+    updateAuthStatus();
+  }, 0);
+});
+
+// 새로고침하거나 다시 방문했을 때 로그인 상태 표시
+document.addEventListener("DOMContentLoaded", () => {
+  updateAuthStatus();
+});
+
   async function testConnection() {
     try {
       const { error } = await supabaseClient.auth.getSession();
@@ -733,6 +796,8 @@ document.getElementById("login-form")
       }
 
       message.textContent = "✅ 로그인 성공!";
+
+await updateAuthStatus();
 
       // 비밀번호 입력창 비우기
       document.getElementById("login-password")
