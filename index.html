@@ -1008,9 +1008,23 @@ await openMyPreferences();
 
   const foodRatings = {};
 
-// STEP 40에서 참여 직원의 실제 Supabase 별점으로 교체 예정
+// STEP 40: 오늘 참여한 직원들의 음식별 평균 별점
+let groupFoodRatings = {};
+
+async function loadGroupFoodRatings() {
+  const { data, error } = await supabaseClient.rpc("get_today_food_ratings");
+  if (error) {
+    console.error("참여자 음식 취향 조회 오류:", error);
+    throw new Error("직원들의 음식 취향을 불러오지 못했습니다. Supabase SQL 설정을 확인해 주세요.");
+  }
+  groupFoodRatings = {};
+  for (const item of data || []) {
+    groupFoodRatings[item.food_name] = Number(item.average_rating);
+  }
+}
+
 function getAverageFoodRating(food) {
-  return 3;
+  return groupFoodRatings[food] ?? 3;
 }
 
   function renderPreferences() {
@@ -1319,80 +1333,68 @@ async function loadMyPreferences() {
     window.scrollTo(0, 0);
   }
 
+  // 음식 분류별 추천 메뉴 대응표
+  const menuFoodCategory = {
+    "국밥": "국밥·해장국", "해장국": "국밥·해장국",
+    "콩나물국밥": "국밥·해장국", "북엇국": "국밥·해장국",
+    "순두부찌개": "순두부·부대찌개", "칼국수": "우동·소바",
+    "샐러드": "샐러드·포케", "포케": "샐러드·포케",
+    "쌀국수": "쌀국수", "제육볶음": "제육볶음·불고기",
+    "불고기": "제육볶음·불고기", "매운 제육볶음": "제육볶음·불고기",
+    "돈가스": "돈가스", "짬뽕": "짬뽕",
+    "마라탕": "마라탕·마라샹궈", "비빔밥": "비빔밥·돌솥밥",
+    "볶음밥": "볶음밥", "백반": "백반·가정식",
+    "우동": "우동·소바", "라멘": "라멘",
+    "잔치국수": "우동·소바", "김밥": "김밥",
+    "덮밥": "덮밥·규동", "팟타이": "팟타이·태국 볶음면",
+    "카레": "카레·인도 음식", "리조또": "리조또"
+  };
+
   async function recommendLunch() {
-    await loadLunchParticipants();
-    const message = document.getElementById(
-      "recommendation-message"
-    );
+    const message = document.getElementById("recommendation-message");
+    const result = document.getElementById("recommendation-result");
+    message.textContent = "참여자 취향과 오늘의 상태를 계산 중입니다...";
+    result.style.display = "none";
 
-    if (lunchParticipants.size === 0) {
-      message.textContent =
-        "⚠️ 먼저 점심 참여자를 등록해 주세요.";
+    try {
+      await loadLunchParticipants();
+      document.getElementById("recommendation-count").textContent =
+        "오늘 점심 참여 인원: " + lunchParticipants.size + "명";
 
-      document.getElementById("recommendation-result")
-        .style.display = "none";
-      return;
-    }
-
-    message.textContent = "";
-
-    const candidates = [];
-
-    // 참여자들의 오늘의 상태 수집
-    for (const { conditions } of lunchParticipants.values()) {
-      for (const condition of conditions) {
-        const menus = menuByCondition[condition] || [];
-        candidates.push(...menus);
+      if (lunchParticipants.size === 0) {
+        message.textContent = "⚠️ 먼저 로그인하고 점심에 참여해 주세요.";
+        return;
       }
+      await loadGroupFoodRatings();
+
+      const members = [...lunchParticipants.values()];
+      const menus = [...new Set(Object.values(menuByCondition).flat())];
+      const scores = menus.map(menu => {
+        const food = menuFoodCategory[menu];
+        const preference = food ? getAverageFoodRating(food) : 3;
+        // 직원별 오늘 상태에 메뉴가 부합하는 정도 (1~5점)
+        const conditionScores = members.map(member => {
+          const selected = member.conditions?.length ? member.conditions : ["normal"];
+          const matched = selected.some(c => (menuByCondition[c] || []).includes(menu));
+          return matched ? 5 : 1;
+        });
+        const condition = conditionScores.reduce((a,b) => a+b,0) / conditionScores.length;
+        return { menu, score: 0.6 * preference + 0.4 * condition };
+      });
+      scores.sort((a,b) => b.score - a.score);
+      const best = scores[0].score;
+      const tied = scores.filter(item => Math.abs(item.score - best) < 1e-9);
+      const chosen = tied[Math.floor(Math.random() * tied.length)];
+
+      currentRecommendedMenu = chosen.menu;
+      document.getElementById("recommended-menu").textContent =
+        "🍽️ " + currentRecommendedMenu;
+      message.textContent = "추천 점수: " + chosen.score.toFixed(2) + "/5점 (취향 60% + 오늘 상태 40%)";
+      result.style.display = "block";
+    } catch (error) {
+      console.error("메뉴 추천 오류:", error);
+      message.textContent = "❌ " + error.message;
     }
-
-    if (candidates.length === 0) {
-      message.textContent = "추천할 메뉴가 없습니다.";
-      return;
-    }
-
-    // 후보 메뉴 중 무작위 선택
-
-    // 별점이 높은 메뉴일수록 추천 확률 증가
-    const weightedCandidates = [];
-
-    for (const menu of candidates) {
-      // "제육볶음" → "제육볶음·불고기"처럼
-      // 음식 분류에 포함된 항목 찾기
-      const matchingFood = Object.values(foodCategories)
-        .flat()
-        .find(food => food.split("·").some(
-          name => menu.includes(name) || name.includes(menu)
-        ));
-
-
-const rating = matchingFood
-  ? getAverageFoodRating(matchingFood)
-  : 3;
-
-
-      // 별점 1~5점에 따라 후보 반복 횟수 결정
-
-const weight = Math.round(rating * 10);
-
-for (let i = 0; i < weight; i++) {
-  weightedCandidates.push(menu);
-}
-
-    }
-
-    const index = Math.floor(
-      Math.random() * weightedCandidates.length
-    );
-
-    currentRecommendedMenu = weightedCandidates[index];
-
-
-    document.getElementById("recommended-menu")
-      .textContent = "🍽️ " + currentRecommendedMenu;
-
-    document.getElementById("recommendation-result")
-      .style.display = "block";
   }
 
   function openRecommendedRestaurant() {
