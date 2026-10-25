@@ -4,7 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>오늘 뭐 먹지? | 우리 회사 점심 추천</title>
+  <title>쩝쩝박사 | 우리 회사 점심 추천</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#FFB900">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="쩝쩝박사">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+
   <style>
     * { box-sizing: border-box; }
     body {
@@ -59,7 +66,7 @@
   align-items:center;
   gap:12px;
 ">
-  <strong>🍱 오늘 뭐 먹지?</strong>
+  <strong>🍱 쩝쩝박사</strong>
 
   <div id="auth-status" style="
     display:flex;
@@ -1572,5 +1579,14 @@ async function loadMyPreferences() {
   }
 </script>
 
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(error => {
+        console.warn('PWA 등록 실패:', error);
+      });
+    });
+  }
+</script>
 </body>
 </html>
